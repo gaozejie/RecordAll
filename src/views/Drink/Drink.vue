@@ -19,17 +19,6 @@
                         @click="changeCapacity" />
             </van-col>
           </van-row>
-
-          <!-- <van-cell-group>
-            <van-field v-model="capacity"
-                       input-align="center"
-                       label-align="center "
-                       placeholder="请输入容量"
-                       right-icon="passed"
-                       required
-                       @click-right-icon="changeCapacity">
-            </van-field>
-          </van-cell-group> -->
         </div>
         <div v-else>
           {{capacity}}
@@ -68,6 +57,27 @@
                     @click="editFrequency('minus')">减一杯</van-button>
       </van-col>
     </van-row>
+    <van-row>
+      <van-col v-if="isShowClear"
+               span="24">
+        <van-button type="danger"
+                    size="large"
+                    @click="clearCache()">重置数据</van-button>
+      </van-col>
+    </van-row>
+
+    <van-list @load="onLoad">
+      <van-cell v-for="(item,index) in list"
+                :key="index">
+        <van-row>
+          <van-col span="2">{{item.sort}}</van-col>
+          <van-col span="5">{{item.capacity}}</van-col>
+          <van-col span="3">{{item.frequency}}</van-col>
+          <van-col span="12">{{item.date}}</van-col>
+          <van-col span="2">{{item.type==="add"?"增":"减"}}</van-col>
+        </van-row>
+      </van-cell>
+    </van-list>
 
     <router-view />
   </div>
@@ -79,13 +89,32 @@
 export default {
   data () {
     return {
-      capacity: 0,
-      frequency: 0,
-      isEdit: false,
-      pdClass: 'pd'
+      capacity: 0, // 容量
+      frequency: 0, // 频率
+      isEdit: false, //
+      pdClass: 'pd', // padding-20
+      list: [], // 数据列表
+      sort: 1, // 序号
+      date: '',
+      isShowClear: false
     }
   },
   methods: {
+    clearCache () {
+      this.frequency = 0
+      this.list = []
+      this.isShowClear = false
+
+      localStorage.removeItem('frequency')
+      localStorage.removeItem('list')
+
+      let nowDate = this.formatDate(Date.now(), 'yyyy-MM-dd')
+      this.date = nowDate
+      localStorage.setItem('date', nowDate)
+    },
+    onLoad () {
+      this.list = JSON.parse(localStorage.getItem('list')) || []
+    },
     changeCapacity () {
       if (this.isEdit) {
         localStorage.setItem('capacity', this.capacity)
@@ -102,15 +131,34 @@ export default {
       } else {
         this.frequency && this.frequency--
       }
-      if (this.frequency) {
+      if (this.frequency >= 0) {
         localStorage.setItem('frequency', this.frequency)
+
+        this.list.unshift({ capacity: this.capacity, frequency: this.frequency, date: this.formatDate(), sort: this.sort++, type: operate })
+        localStorage.setItem('list', JSON.stringify(this.list))
       }
     },
-    initData () {
-      this.capacity = localStorage.getItem('capacity') || 0
-      this.frequency = localStorage.getItem('frequency') || 0
-    }
+    formatDate (idate = Date.now(), fmt = 'yyyy-MM-dd hh:mm:ss') {
+      let date = new Date(idate)
+      if (/(y+)/.test(fmt)) {
+        fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length))
+      }
+      let o = {
+        'M+': date.getMonth() + 1,
+        'd+': date.getDate(),
+        'h+': date.getHours(),
+        'm+': date.getMinutes(),
+        's+': date.getSeconds()
+      }
 
+      for (let k in o) {
+        if (new RegExp(`(${k})`).test(fmt)) {
+          let str = o[k] + ''
+          fmt = fmt.replace(RegExp.$1, RegExp.$1.length === 1 ? str : ('00' + str).substr(str.length))
+        }
+      }
+      return fmt
+    }
   },
   components: {
   },
@@ -126,6 +174,18 @@ export default {
   mounted: function () {
     this.capacity = localStorage.getItem('capacity') || 0
     this.frequency = localStorage.getItem('frequency') || 0
+    this.date = localStorage.getItem('date')
+    // 如果缓存和本地都没值，说明第一次进入，写缓存
+    if (!this.date) {
+      let nowDate = this.formatDate(Date.now(), 'yyyy-MM-dd')
+      this.date = nowDate
+      localStorage.setItem('date', nowDate)
+    } else {
+      // 比较日期，如果当前日期比缓存日期大，则显示清楚按钮
+      if (new Date(this.formatDate(Date.now(), 'yyyy-MM-dd')) > new Date(this.date)) {
+        this.isShowClear = true
+      }
+    }
   }
 }
 </script>
