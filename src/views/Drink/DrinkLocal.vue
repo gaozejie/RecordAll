@@ -2,6 +2,7 @@
   <div>
     <van-nav-bar title="记录喝水"
                  left-text="返回"
+                 right-text="添加"
                  left-arrow
                  @click-left="onClickLeft" />
 
@@ -71,7 +72,7 @@
       </van-col>
     </van-row>
 
-    <van-list>
+    <van-list @load="onLoad">
       <van-cell v-for="(item,index) in list"
                 :key="index">
         <van-row>
@@ -90,7 +91,7 @@
 </template>
 
 <script>
-import { cacheHelper, formaterHelper } from '../../../common/Utils.js'
+
 export default {
   data () {
     return {
@@ -101,8 +102,7 @@ export default {
       list: [], // 数据列表
       sort: 1, // 序号
       date: '',
-      isShowClear: false,
-      userId: cacheHelper.getLocalStorage('userIdA')
+      isShowClear: false
     }
   },
   methods: {
@@ -118,26 +118,12 @@ export default {
       localStorage.removeItem('list')
       localStorage.removeItem('sort')
 
-      let nowDate = formaterHelper.formatDate(Date.now(), 'yyyy-MM-dd')
+      let nowDate = this.formatDate(Date.now(), 'yyyy-MM-dd')
       this.date = nowDate
       localStorage.setItem('date', nowDate)
     },
     onLoad () {
       this.list = JSON.parse(localStorage.getItem('list')) || []
-      // let userId = this.userId
-      // this.$axios.get('/api/DrinkRecord/' + userId)
-      //   .then((response) => {
-      //     console.log(response)
-      //     if (response.data) {
-      //       this.list = response.data
-      //     } else {
-      //       this.$toast('获取信息失败，请重试。')
-      //     }
-      //   })
-      //   .catch((response) => {
-      //     this.$toast('获取信息出错，请重试。')
-      //     console.log(response)
-      //   })
     },
     changeCapacity () {
       if (this.isEdit) {
@@ -156,43 +142,33 @@ export default {
         this.frequency && this.frequency--
       }
       if (this.frequency >= 0) {
-        console.log(this.userId + '_' + this.capacity + '_' + this.frequency)
+        localStorage.setItem('frequency', this.frequency)
+        localStorage.setItem('sort', this.sort)
 
-        this.$axios.post('/api/DrinkRecord', { UserId: this.userId, Capacity: this.capacity, Frequency: this.frequency })
-          .then((response) => {
-            console.log(response)
-            if (response.data) {
-              this.$toast('添加成功。')
-              localStorage.setItem('frequency', this.frequency)
-              localStorage.setItem('sort', this.sort)
-
-              this.list.unshift({ capacity: this.capacity, frequency: this.frequency, date: formaterHelper.formatDate(), sort: this.sort++, type: operate })
-              localStorage.setItem('list', JSON.stringify(this.list))
-            }
-          })
-          .catch((response) => {
-            this.$toast('注册出错，请重试。')
-            console.log(response)
-          })
-
-        // this.$axios.post('/api/DrinkRecord', { UserId: 1, Capacity: 2, Frequency: 3 })
-        //   .then((response) => {
-        //     console.log(response)
-        //     if (response.data) {
-        //       this.$toast('添加成功。')
-        //       localStorage.setItem('frequency', this.frequency)
-        //       localStorage.setItem('sort', this.sort)
-        //       this.list.unshift({ capacity: this.capacity, frequency: this.frequency, date: formaterHelper.formatDate(), sort: this.sort++, type: operate })
-        //       localStorage.setItem('list', JSON.stringify(this.list))
-        //     } else {
-        //       this.$toast('添加失败，请重试。')
-        //     }
-        //   })
-        //   .catch((response) => {
-        //     this.$toast('添加出错，请重试。')
-        //     console.log(response)
-        //   })
+        this.list.unshift({ capacity: this.capacity, frequency: this.frequency, date: this.formatDate(), sort: this.sort++, type: operate })
+        localStorage.setItem('list', JSON.stringify(this.list))
       }
+    },
+    formatDate (idate = Date.now(), fmt = 'yyyy-MM-dd hh:mm:ss') {
+      let date = new Date(idate)
+      if (/(y+)/.test(fmt)) {
+        fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length))
+      }
+      let o = {
+        'M+': date.getMonth() + 1,
+        'd+': date.getDate(),
+        'h+': date.getHours(),
+        'm+': date.getMinutes(),
+        's+': date.getSeconds()
+      }
+
+      for (let k in o) {
+        if (new RegExp(`(${k})`).test(fmt)) {
+          let str = o[k] + ''
+          fmt = fmt.replace(RegExp.$1, RegExp.$1.length === 1 ? str : ('00' + str).substr(str.length))
+        }
+      }
+      return fmt
     }
   },
   components: {
@@ -211,19 +187,17 @@ export default {
     this.frequency = localStorage.getItem('frequency') || 0
     this.date = localStorage.getItem('date')
     this.sort = parseInt(localStorage.getItem('sort') || 0) + 1
-
     // 如果缓存和本地都没值，说明第一次进入，写缓存
     if (!this.date) {
-      let nowDate = formaterHelper.formatDate(Date.now(), 'yyyy-MM-dd')
+      let nowDate = this.formatDate(Date.now(), 'yyyy-MM-dd')
       this.date = nowDate
       localStorage.setItem('date', nowDate)
     } else {
       // 比较日期，如果当前日期比缓存日期大，则显示清楚按钮
-      if (new Date(formaterHelper.formatDate(Date.now(), 'yyyy-MM-dd')) > new Date(this.date)) {
-        this.clearCache()
+      if (new Date(this.formatDate(Date.now(), 'yyyy-MM-dd')) > new Date(this.date)) {
+        this.isShowClear = true
       }
     }
-    this.onLoad()
   }
 }
 </script>

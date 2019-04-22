@@ -1,16 +1,19 @@
-/* eslint-disable */
 import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import store from './store'
-import Vant from 'vant';
-import 'vant/lib/index.css';
+import Vant from 'vant'
+import 'vant/lib/index.css'
 
-Vue.use(Vant);
+import axios from 'axios'
+console.log(process.env.NODE_ENV)
+console.log(process.env.VUE_APP_AXIOS_BASE_URL)
+axios.defaults.baseURL = process.env.VUE_APP_AXIOS_BASE_URL
+Vue.prototype.$axios = axios
+
+Vue.use(Vant)
 
 Vue.config.productionTip = false
-
-
 
 new Vue({
   router,
